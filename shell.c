@@ -1,7 +1,8 @@
 /* shell -ohjelma */
 /* Tekijät: Juho Kontiainen 0503209 */
-/*          Jesse Peltola           */
-/* Lähteet: stackoverflow,https://brennan.io/2015/01/16/write-a-shell-in-c/*/
+/*          Jesse Peltola   0523140 */
+/* Lähteet: stackoverflow,https://brennan.io/2015/01/16/write-a-shell-in-c/, 
+kurssin esimerkit*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +13,6 @@
 #define STRTOKSEP " \n"
 #define MAXKOKO 1024
 #define error_message "An error has occurred\n"
-/*>>>> merkkejä voi olla mielivaltaisesti, fileparse parsee ylimääräiset > vittuun *pitää kehittää joku tapa checkata onko > merkkejä monta, jos >1 niin error ja exit + pitää checkata onko > merkin jälkeen kuinka monta argumenttia, esim: (> d s) on kaksi commandia, jolloin pitäisi tulla error */
 
 int suoritus(char **,char *,char *);
 int prosessi(char **,char *,char *);
@@ -23,7 +23,7 @@ char* presuoritus(char**,char*,char*,char*);
 char* parsefile(char*);
 char** parse(char*);
 char* luku();
-void batchluku(char*,char**);
+char* batchluku(char*,char**);
 void loop(char**);
 
 int main(int argc, char **argv) {
@@ -35,6 +35,29 @@ int main(int argc, char **argv) {
     fprintf(stderr,"Too many arguments given.\n"); //muuten liikaa argumentteja
   }
   return 0;
+}
+void loop(char **argv) {
+  char *pathstr = malloc(MAXKOKO*sizeof(char));
+  strcpy(pathstr,"/bin");
+  int pituus = strlen(pathstr);
+  pathstr[pituus+1] = 0;
+  char **argw; /*argumentteja varten */
+  char *rivi; 
+  char *filen = NULL;
+  if (argv != NULL) { /*batch */
+    pathstr = batchluku(pathstr,argv); /*lukee ja käsittelee tiedoston sekä kutsuu
+					 tarvittavia funktioita syötteen ajamiseen */
+  }
+  while(1) {	
+    printf("> ");
+    rivi = luku();
+    filen = parsefile(rivi); /*Tiedoston nimi, jos on syötteessä on ">" */
+    argw = parse(rivi);      /*whitespacen mukaan syötteen erottelu */  
+    pathstr = presuoritus(argw,pathstr,rivi,filen);
+/* Huom. exit on funktio erikseen, joka kutsuu exit(0), joten
+   muistin vapautukset täytyy hoitaa ennen exitin kutsumista,
+   sen takia annetaan pointtereina rivi, jota ei käytetä presuoritusfunktiossa */
+  }
 }
 char* path(char **argw,char *pathstr) { /*muuttaa path-merkkijonoa sen mukaan mitä käyttäjä kutsuu -pathiä */
   int i;
@@ -59,13 +82,14 @@ int cd(char **argw) { /*sisäänrakennettu cd */
   }
   if (argw[2] != NULL) {
     fprintf(stderr,"Too many arguments for command 'cd'.\n");
+		return 1;
   }
   dir = argw[1];
   if (chdir(dir) == -1) {
     fprintf(stderr,"cd error:\n");
     perror("cd");
   }
-  return 1;
+  return 0;
 }
 void lexit() { /*exit-funktio */
   exit(0);
@@ -81,7 +105,7 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
   int i;
   char **builtins = builtints();
   if (argw[0] == NULL) { /*syöte on tyhjä, joten ei suoriteta mitään */
-    if (builtins) {free(builtins);}
+    if (builtins) {free(builtins);} /*Muistin vapautusta */
     if (argw) {free(argw);}
     if (rivi) {free(rivi);}
     return pathstr;
@@ -94,16 +118,16 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
 	pathstr = path(argw,pathstr);
 	if (rivi) {free(rivi);}
 	if (argw) {free(argw);}
-	return pathstr;
+	return pathstr;	
       } else if	(strcmp(builtins[i],"cd") == 0) {
-	cd(argw);
-	if (builtins) {free(builtins);}
+	cd(argw);	
+	if (builtins) {free(builtins);} /*Muistin vapautusta */
 	if (argw) {free(argw);}
 	if (rivi) {free(rivi);}
 	return pathstr;
 	
       } else if (strcmp(builtins[i],"exit") == 0) {
-	if (pathstr) {free(pathstr);}
+	if (pathstr) {free(pathstr);} /*Muistin vapautusta */
 	if (builtins) {free(builtins);}
 	if (argw) {free(argw);}
 	if (rivi) {free(rivi);}
@@ -114,13 +138,14 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
   /*Muuten liikutaan suoritus-funktioon */
   
   suoritus(argw,pathstr,filen);
-  if (builtins) {free(builtins);}
+  if (builtins) {free(builtins);} /*Muistin vapautusta */
   if (argw) {free(argw);}
   if (rivi) {free(rivi);}
   return pathstr;
 }
 
-int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosessi-funktiota) jos access löytää ohjelman  */
+int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosessi-funktiota)
+							jos access-kutsu löytää ohjelman  */
   int k,i = 0;
   char t[] = "/";
   char **slista = malloc(MAXKOKO*sizeof(char));
@@ -130,48 +155,48 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
   char *token;
   char *pathstr2 = malloc(MAXKOKO*sizeof(char));
   if (pathstr2  == NULL) {write(STDERR_FILENO, error_message, strlen(error_message));perror("malloc");}
-  
-  
+
   strcpy(pathstr2,pathstr);
   token = strtok(pathstr2,":");  /*pathien parsiminen erilleen */
   while (token != NULL) { /*listaan pathit */
     slista[i] = token;
     i++;
     token = strtok(NULL, ":");
-  }
-  
-  for (k=0; k<i; ++k) { /*path-listan käyminen läpi ja merkkijonon muokkaaminen "oikeanlaiseksi" access sekä execv-kutsuja varten */
+  }  
+  for (k=0; k<i; ++k) { /*path-listan käyminen läpi ja merkkijonon muokkaaminen
+			  "oikeanlaiseksi" access- sekä execv-kutsuja varten */
     strcpy(suorituspath,slista[k]);
     strcat(suorituspath,t);    
     strcat(suorituspath,argw[0]); 
     if (!access(suorituspath,X_OK)) { /*jos löydetään ajettava ohjelma */
       
       prosessi(argw,suorituspath,filen); /*ohjelma löytyi,ajetaan */
-      if (slista) {free(slista);}
+      if (slista) {free(slista);} /*Muistin vapautusta */
       if (suorituspath) {free(suorituspath);}
       if (pathstr2) {free(pathstr2);}
       if (token) {free(token);}
       return 0;
-    }
-    
+    }   
   }
   /*Muuten tänne */
-  if (filen!= NULL) { /*virheen kirjoitus tiedostoon;ollaan epäonnistuttu ohjelman ajamisessa ja jos filen!=null, niin on yritetty kirjoittaa tiedostoon */
+  if (filen!= NULL) { /*virheen kirjoitus tiedostoon;ollaan epäonnistuttu ohjelman
+			ajamisessa ja jos filen!=null, niin on yritetty kirjoittaa tiedostoon */
     FILE *filep;
-    if ((filep=fopen(filen,"w")) == NULL) { /*Luo uuden tiedoston/tyhjentää vanhan, en saanut tehtyä tätä open() kutsulla  */
+    if ((filep=fopen(filen,"w")) == NULL) { /*Luo uuden tiedoston/tyhjentää vanhan,
+					      en saanut tehtyä tätä open() kutsulla  */
       perror("fopen");
       exit(1);
     } else {
       fprintf(filep,error_message);
       fclose(filep);
-      if (slista) {free(slista);}
+      if (slista) {free(slista);} /*Muistin vapautusta */
       if (suorituspath) {free(suorituspath);}
       if (pathstr2) {free(pathstr2);}
       if (token) {free(token);}
       return 1;
     }
   }
-  if (slista) {free(slista);}
+  if (slista) {free(slista);} /*Muistin vapautusta */
   if (suorituspath) {free(suorituspath);}
   if (pathstr2) {free(pathstr2);}
   if (token) {free(token);}
@@ -191,18 +216,18 @@ int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esi
       fclose(filep);
     }   
   }
-  if (filen != NULL) {								/*dup() lähde; https://stackoverflow.com/questions/29154056/redirect-stdout-to-a-file */
+  if (filen != NULL) { 	/*dup() lähde; https://stackoverflow.com/questions/29154056/redirect-stdout-to-a-file */
     filefd = open(filen, O_WRONLY|O_CREAT);
   }
   
   int pid;
   switch (pid = fork()) {
-  case -1:          	/* error in fork */
-    exit(0);
-  case 0:           	/* child process */
+  case -1:          	/* fork-error */
+    exit(1);
+  case 0:           	/* lapsi prosessi */
     if (filen != NULL) {
       close(1);
-      dup(filefd);
+      dup(filefd); /*output ohjataan tiedostoon */
     }
     if (execv(pathstr, argw) == -1) {
       write(STDERR_FILENO, error_message, strlen(error_message));
@@ -211,7 +236,7 @@ int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esi
     }
     break;
     
-  default:          	/* parent process */
+  default:          	/* vanhemman prosessi */
     if (wait(&pid) == -1) { 	 
       write(STDERR_FILENO, error_message, strlen(error_message));
       perror("wait");
@@ -224,7 +249,8 @@ int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esi
   }
   return 0;
 }
-char *parsefile(char *rivi) { /*Jaetaan saatu merkkijono jos merkki ">" löytyy, ja palautetaan ">" jälkimmäiset merkit */
+char *parsefile(char *rivi) { /*Jaetaan saatu merkkijono jos merkki ">"
+				löytyy, ja palautetaan ">" jälkimmäiset merkit */
   char *arg2; /* eli tiedosto */
   arg2 = strtok(rivi,">");
   arg2 = strtok(NULL," >\n");
@@ -253,7 +279,7 @@ char *luku(void) { /*luetaan stdin, palautetaan saatu merkkijono */
   }
   return rivi;
 }
-void batchluku(char *pathstr,char **argv) { /*batchtiedoston luku,parse ja suoritus */
+char *batchluku(char *pathstr,char **argv) { /*batchtiedoston luku,parse ja suoritus */
   char *filen = NULL;
   FILE *filep;
   if ((filep = fopen(argv[1],"r")) == NULL) { /*tiedoston lukua */
@@ -264,30 +290,15 @@ void batchluku(char *pathstr,char **argv) { /*batchtiedoston luku,parse ja suori
   size_t koko = 0;
   char *rivi = NULL;
   while ((getline(&rivi,&koko,filep)) != -1) { /*tiedoston rivien läpikäyminen */
-    filen = parsefile(rivi); /*tdsto nimi,parsee myös rivin sihen kuntoon, että argw voi ottaa sen sisään (poistaa kaikki > merkit,ja niiden jälkeen olevat asiat) */
+    filen = parsefile(rivi); /*tdsto nimi,parsee myös rivin sihen kuntoon,
+			       että argw voi ottaa sen sisään (poistaa kaikki > merkit,ja niiden jälkeen olevat asiat) */
     argw = parse(rivi);  	/*lista argumentteja */
     pathstr = presuoritus(argw,pathstr,rivi,filen);
-    rivi = malloc(sizeof(char)*MAXKOKO); //pientä kikkailua, jotta ei muistivuotoja
+    rivi = malloc(sizeof(char)*MAXKOKO); /*pientä kikkailua, jotta ei muistivuotoja,
+					   getline ei suostunut toimimaan ilman näitä, sillä presuorituksessa vapautetaan rivi-muuttuja*/
   }
   free(rivi); //kikkailu jatkuu
   fclose(filep);
+  return pathstr;
 }
-void loop(char **argv) {
-  char *pathstr = malloc(MAXKOKO*sizeof(char));
-  strcpy(pathstr,"/bin");
-  int pituus = strlen(pathstr);
-  pathstr[pituus+1] = 0;
-  char **argw;
-  char *rivi;
-  char *filen = NULL;
-  if (argv != NULL) { /*batch */
-    batchluku(pathstr,argv); /*lukee ja käsittelee tiedoston sekä kutsuu tarvittavia funktioita syötteen ajamiseen */
-  }
-  while(1) {	
-    printf("> ");
-    rivi = luku();
-    filen = parsefile(rivi);
-    argw = parse(rivi);
-    pathstr = presuoritus(argw,pathstr,rivi,filen);	/*exit on funktio erikseen, joka kutsuu exit(0), joten muistin vapautukset täytyy hoitaa ennen exitin kutsumista, sen takia annetaan pointtereina rivi, jota ei käytetä presuoritusfunktiossa */
-  }
-}
+
