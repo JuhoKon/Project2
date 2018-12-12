@@ -48,7 +48,7 @@ void loop(char **argv) {
     pathstr = batchluku(pathstr,argv); /*lukee ja käsittelee tiedoston sekä kutsuu
 					 tarvittavia funktioita syötteen ajamiseen */
   }
-  while(1) {	
+  while(1) {	/*Idean lähde https://brennan.io/2015/01/16/write-a-shell-in-c/ */
     printf("> ");
     rivi = luku();
     filen = parsefile(rivi); /*Tiedoston nimi, jos on syötteessä on ">" */
