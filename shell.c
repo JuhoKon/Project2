@@ -93,7 +93,8 @@ int cd(char **argw) { /*sisäänrakennettu cd */
 void lexit() { /*exit-funktio */
   exit(0);
 }
-char **builtints(void) { /*Sisäänrakennetut komennot */
+char **builtints(void) { /*Sisäänrakennetut komennot,idean lähde osittain
+													 https://brennan.io/2015/01/16/write-a-shell-in-c/  */
   char **builtins = malloc(MAXKOKO*sizeof(char));
   builtins[0] = "cd";
   builtins[1] = "path";
@@ -163,7 +164,8 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
     strcpy(suorituspath,slista[k]);
     strcat(suorituspath,t);    
     strcat(suorituspath,argw[0]); 
-    if (!access(suorituspath,X_OK)) { /*jos löydetään ajettava ohjelma */      
+    if (!access(suorituspath,X_OK)) { /*jos löydetään ajettava ohjelma, lähde:
+									http://pubs.opengroup.org/onlinepubs/009695299/functions/access.html*/      
       prosessi(argw,suorituspath,filen); /*ohjelma löytyi,ajetaan */
       if (slista) {free(slista);} /*Muistin vapautusta */
       if (suorituspath) {free(suorituspath);}
@@ -198,7 +200,7 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
   perror("access");
   return 1;
 }
-int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esimerkki rungosta fork */
+int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esimerkkirungosta fork-toiminta */
   int filefd;                                       	/*prosessi tekee lapsi-prosessin ja ajaa halutun ohjelman execv-kutsulla */
   FILE *filep;
   if (filen != NULL) {
