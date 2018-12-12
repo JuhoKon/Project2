@@ -266,7 +266,7 @@ char **parse(char *rivi) { /*luodaan saadusta merkkijonosta lista argumentteja,j
 char *luku(void) { /*luetaan stdin, palautetaan saatu merkkijono */
   size_t koko = 0;
   char *rivi = NULL;
-  if (getline(&rivi,&koko,stdin) == -1) {
+  if (getline(&rivi,&koko,stdin) == -1) { /* getline-funktion toiminta https://brennan.io/2015/01/16/write-a-shell-in-c/ */
     perror("getline");
   }
   return rivi;
