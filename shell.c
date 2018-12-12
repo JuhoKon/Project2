@@ -2,7 +2,7 @@
 /* Tekijät: Juho Kontiainen 0503209 */
 /*          Jesse Peltola   0523140 */
 /* Lähteet: stackoverflow,https://brennan.io/2015/01/16/write-a-shell-in-c/, 
-kurssin esimerkit*/
+   kurssin esimerkit*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +71,6 @@ char* path(char **argw,char *pathstr) { /*muuttaa path-merkkijonoa sen mukaan mi
     strcat(pathstr,argw[i]);
     strcat(pathstr,t);
   }
-  
   return pathstr;
 }
 int cd(char **argw) { /*sisäänrakennettu cd */
@@ -82,7 +81,7 @@ int cd(char **argw) { /*sisäänrakennettu cd */
   }
   if (argw[2] != NULL) {
     fprintf(stderr,"Too many arguments for command 'cd'.\n");
-		return 1;
+    return 1;
   }
   dir = argw[1];
   if (chdir(dir) == -1) {
@@ -111,7 +110,7 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
     return pathstr;
   }
   for (i= 0; i<3; i++) { /*tarkistetaan löytyykö syöte builtin-funktioista */
-    if (strcmp(argw[0], builtins[i]) == 0) {
+    if (strcmp(argw[0], builtins[i]) == 0) { /*Löytyi */
       if (strcmp(builtins[i],"path") == 0) {
 	if (builtins) {free(builtins);}
 	if (pathstr) {free(pathstr);} /*vapautetaan muisti pathiä varten */
@@ -124,8 +123,7 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
 	if (builtins) {free(builtins);} /*Muistin vapautusta */
 	if (argw) {free(argw);}
 	if (rivi) {free(rivi);}
-	return pathstr;
-	
+	return pathstr;	
       } else if (strcmp(builtins[i],"exit") == 0) {
 	if (pathstr) {free(pathstr);} /*Muistin vapautusta */
 	if (builtins) {free(builtins);}
@@ -135,15 +133,13 @@ char* presuoritus(char **argw,char *pathstr,char *rivi,char *filen) { /*testaa h
       }
     }
   }
-  /*Muuten liikutaan suoritus-funktioon */
-  
+  /*Muuten liikutaan suoritus-funktioon */ 
   suoritus(argw,pathstr,filen);
   if (builtins) {free(builtins);} /*Muistin vapautusta */
   if (argw) {free(argw);}
   if (rivi) {free(rivi);}
   return pathstr;
 }
-
 int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosessi-funktiota)
 							jos access-kutsu löytää ohjelman  */
   int k,i = 0;
@@ -155,10 +151,9 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
   char *token;
   char *pathstr2 = malloc(MAXKOKO*sizeof(char));
   if (pathstr2  == NULL) {write(STDERR_FILENO, error_message, strlen(error_message));perror("malloc");}
-
   strcpy(pathstr2,pathstr);
   token = strtok(pathstr2,":");  /*pathien parsiminen erilleen */
-  while (token != NULL) { /*listaan pathit */
+  while (token != NULL) { /*laitetaan pathit listaan slista */
     slista[i] = token;
     i++;
     token = strtok(NULL, ":");
@@ -168,8 +163,7 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
     strcpy(suorituspath,slista[k]);
     strcat(suorituspath,t);    
     strcat(suorituspath,argw[0]); 
-    if (!access(suorituspath,X_OK)) { /*jos löydetään ajettava ohjelma */
-      
+    if (!access(suorituspath,X_OK)) { /*jos löydetään ajettava ohjelma */      
       prosessi(argw,suorituspath,filen); /*ohjelma löytyi,ajetaan */
       if (slista) {free(slista);} /*Muistin vapautusta */
       if (suorituspath) {free(suorituspath);}
@@ -200,7 +194,6 @@ int suoritus(char **argw,char *pathstr,char *filen) { /*Suorittaa(kutsuu prosess
   if (suorituspath) {free(suorituspath);}
   if (pathstr2) {free(pathstr2);}
   if (token) {free(token);}
-  
   write(STDERR_FILENO, error_message, strlen(error_message));
   perror("access");
   return 1;
@@ -236,7 +229,7 @@ int prosessi (char **argw, char *pathstr,char *filen) { /*Kurssin tehtävien esi
     }
     break;
     
-  default:          	/* vanhemman prosessi */
+  default:          	/* vanhempi prosessi */
     if (wait(&pid) == -1) { 	 
       write(STDERR_FILENO, error_message, strlen(error_message));
       perror("wait");
@@ -261,9 +254,8 @@ char **parse(char *rivi) { /*luodaan saadusta merkkijonosta lista argumentteja,j
   if (argw  == NULL) {write(STDERR_FILENO, error_message, strlen(error_message));perror("malloc");}
   char *arg;
   int i=0;
-  
   arg = strtok(rivi,STRTOKSEP);
-  while (arg != NULL) {
+  while (arg != NULL) {  /*Listan luonti argumenteista */
     argw[i] = arg;
     i++;
     arg = strtok(NULL, STRTOKSEP);
@@ -301,4 +293,3 @@ char *batchluku(char *pathstr,char **argv) { /*batchtiedoston luku,parse ja suor
   fclose(filep);
   return pathstr;
 }
-
